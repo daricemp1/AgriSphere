@@ -1,0 +1,9 @@
+streamlit
+torch
+torchvision
+transformers
+experta
+prophet    
+requests
+pandas
+Pillow

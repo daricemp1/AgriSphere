@@ -1,0 +1,13 @@
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Virtual envs
+.venv/
+env/
+farmproto/
+
+# Streamlit temp files
+.streamlit/
+
+sample_data/
