@@ -1,0 +1,16 @@
+{
+  "country_label": "India",
+  "country_key": "india",
+  "param": "precipitation",
+  "horizon_days": 3,
+  "backtest_metrics": {
+    "MAE": 2.108488515668386,
+    "RMSE": 2.7089676249218826,
+    "MAPE%": 220.64021878835803,
+    "R2": -44.224737212013046
+  },
+  "train_window_days": 730,
+  "input_size": 365,
+  "max_steps": 500,
+  "saved_at": "2025-08-23T09:12:04.598247Z"
+}

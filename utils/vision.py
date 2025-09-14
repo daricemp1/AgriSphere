@@ -1,101 +1,101 @@
 import torch
 from torchvision import models, transforms
 from PIL import Image
+import onnxruntime as ort
+import numpy as np
 
-# Retrieves the description of the plant state from the technical class name 
+# Converts technical class name into readable description
 def get_disease_description(class_name):
-    # convert to lowercase for processing
     normalized = class_name.lower()
-    
-    # handle healthy cases
+
     if 'healthy' in normalized:
         return "Plant is healthy"
-    
-    # split by underscores and other separators
-    parts = normalized.replace('-', '_').split('_')
-    
-    #turns this output into a readable sentences 
+
+    parts = normalized.split('_')
+
     if len(parts) >= 2:
-        disease_parts = parts[1:]
-        disease_name = ' '.join(disease_parts)
-        disease_name = disease_name.title()        
-        return f"{disease_name} detected"
-    # if no disease is found , clean up and returns something readable 
+        crop = parts[0].capitalize()
+        disease = ' '.join([p.capitalize() for p in parts[1:]])
+        return f"{crop} - {disease} detected"
     else:
-        clean_name = normalized.replace('_', ' ').replace('-', ' ').title()
+        clean_name = normalized.replace('_', ' ').title()
         return f"{clean_name} detected"
 
-# Builds efficient net model and customizes the output layer 
+# Builds EfficientNet model with custom classifier layer
 def create_disease_model(num_disease_classes):
     model = models.efficientnet_b0(pretrained=True)
-    #tailored to fit my number of disease classes 
     model.classifier[1] = torch.nn.Linear(
         model.classifier[1].in_features,
         num_disease_classes
     )
     return model
 
-# 2. Load trained model and list of class names for inference
+# Loads trained model and class names, with ONNX and TorchScript export
 def load_vision_model():
     class_names = torch.load("class_names.pt")
     model = create_disease_model(len(class_names))
-    model.load_state_dict(torch.load("efficientnet_disease.pt", map_location="cpu"))
+    model.load_state_dict(torch.load("best_efficientnet_disease.pt", map_location="cpu"))
     model.eval()
+
     # Debug: Print all available classes
     print("=== MODEL LOADING DEBUG ===")
     print(f"Total number of classes: {len(class_names)}")
-    print("All available classes:")
     for i, class_name in enumerate(class_names):
         print(f"  {i}: {class_name}")
     print("=" * 30)
-    
-    return model, class_names
 
-# 3. Define preprocessing (same as training), prepares the images so that model can understand them 
+    # Export to ONNX
+    dummy_input = torch.randn(1, 3, 224, 224)  # Adjust input size if different
+    torch.onnx.export(model, dummy_input, "vision_model.onnx", opset_version=11, do_constant_folding=True,
+                      input_names=["input"], output_names=["output"])
+    # Export to TorchScript
+    scripted_model = torch.jit.trace(model, dummy_input)
+    scripted_model.save("vision_model.pt")
+    # Load ONNX session
+    onnx_session = ort.InferenceSession("vision_model.onnx")
+
+    return {"model": model, "class_names": class_names, "onnx_session": onnx_session, "scripted_model": scripted_model}
+
+# Preprocessing pipeline
 vision_transform = transforms.Compose([
-    # resizes images 
     transforms.Resize((224, 224)),
-    # turns it into a tensor which is pytorch's format 
     transforms.ToTensor(),
-    # normalize pixel colors to match them with what efficient net expects 
     transforms.Normalize([0.485, 0.456, 0.406],
                          [0.229, 0.224, 0.225]),
 ])
 
-# Takes an image and predicts the disease 
+# Predict disease from a single image
 def predict_disease(image_path, model_bundle, return_confidence=False, debug=True):
-    # unpacks the model and the class labels 
-    model, class_names = model_bundle
-    # opens the uploaded image and make sure that it is in colour
+    if not isinstance(model_bundle, dict):
+        raise ValueError("model_bundle must be a dictionary containing model and class_names")
+    
+    model = model_bundle["model"]
+    class_names = model_bundle["class_names"]
     img = Image.open(image_path).convert("RGB")
-    # applies all the image processing steps and adds a batch dimension ( this is the batch size )
     tensor = vision_transform(img).unsqueeze(0)
 
-    # Prediction 
-    # runs the image through the model, but turns off training mode 
     with torch.no_grad():
-        logits = model(tensor)
-        # converts raw scores into probabilities 
-        probabilities = torch.softmax(logits, dim=1)
-        # finds the most likely class and the respective confidence score 
-        predicted_idx = logits.argmax(dim=1).item()
+        if "onnx_session" in model_bundle:
+            input_data = {model_bundle["onnx_session"].get_inputs()[0].name: tensor.numpy()}
+            logits = model_bundle["onnx_session"].run(None, input_data)[0]
+        elif "scripted_model" in model_bundle:
+            logits = model_bundle["scripted_model"](tensor)
+        else:
+            logits = model(tensor)
+
+        probabilities = torch.softmax(torch.from_numpy(logits) if isinstance(logits, np.ndarray) else logits, dim=1)
+        predicted_idx = torch.argmax(probabilities, dim=1).item()
         confidence = probabilities[0][predicted_idx].item()
 
-        # get technical class name
         technical_class = class_names[predicted_idx]
-        
-        # auto-generate simple description
         simple_description = get_disease_description(technical_class)
-        
-        # Debugging information
+
         if debug:
             print(f"\n=== PREDICTION DEBUG for {image_path} ===")
             print(f"Predicted index: {predicted_idx}")
             print(f"Technical class predicted: '{technical_class}'")
             print(f"Generated description: '{simple_description}'")
             print(f"Confidence: {confidence:.4f}")
-            
-            # Show top 3 predictions for better debugging
             top_3_indices = torch.topk(probabilities[0], 3).indices
             top_3_probs = torch.topk(probabilities[0], 3).values
             print("Top 3 predictions:")
@@ -104,13 +104,13 @@ def predict_disease(image_path, model_bundle, return_confidence=False, debug=Tru
                 description = get_disease_description(class_name)
                 print(f"  {i+1}. {class_name} -> '{description}' (confidence: {prob:.4f})")
             print("=" * 50)
-        
+
         if return_confidence:
             return simple_description, confidence, technical_class
         else:
             return simple_description
 
-# 5. Batch prediction function which runs prediction for multiple images at once 
+# Predict multiple images in a batch
 def predict_diseases_batch(image_paths, model_bundle, return_confidence=False, debug=True):
     results = []
     for image_path in image_paths:
@@ -125,16 +125,48 @@ def predict_diseases_batch(image_paths, model_bundle, return_confidence=False, d
                 results.append((error_msg, 0.0, "error"))
             else:
                 results.append(error_msg)
-    
     return results
 
-# 6. Additional debugging function
+# Utility for debugging class name conversion
 def debug_class_mapping(class_names):
-    """
-    Debug function to see how each class name gets converted to description.
-    """
     print("\n=== CLASS MAPPING DEBUG ===")
     for i, class_name in enumerate(class_names):
         description = get_disease_description(class_name)
         print(f"{i:2d}: '{class_name}' -> '{description}'")
     print("=" * 30)
+
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, classification_report, confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+
+def evaluate_model_on_dataset(model, dataloader, class_names):
+    model.eval()
+    all_preds = []
+    all_labels = []
+
+    with torch.no_grad():
+        for images, labels in dataloader:
+            outputs = model(images)
+            preds = torch.argmax(outputs, dim=1)
+            all_preds.extend(preds.tolist())
+            all_labels.extend(labels.tolist())
+
+    print("\n=== MODEL EVALUATION METRICS ===")
+    print(f"Accuracy: {accuracy_score(all_labels, all_preds):.4f}")
+
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        all_labels, all_preds, average='weighted'
+    )
+
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall:    {recall:.4f}")
+    print(f"F1 Score:  {f1:.4f}\n")
+
+    print("Classification Report:")
+    print(classification_report(all_labels, all_preds, target_names=class_names))
+
+    # Optionally visualize confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+    disp.plot(xticks_rotation=90)
+    plt.tight_layout()
+    plt.show()

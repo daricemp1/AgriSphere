@@ -1,0 +1,16 @@
+{
+  "country_label": "Singapore",
+  "country_key": "singapore",
+  "param": "precipitation",
+  "horizon_days": 7,
+  "backtest_metrics": {
+    "MAE": 7.7002858557671825,
+    "RMSE": 9.928941300189974,
+    "MAPE%": 628.6840448517803,
+    "R2": -1.417535695752419
+  },
+  "train_window_days": 730,
+  "input_size": 365,
+  "max_steps": 500,
+  "saved_at": "2025-08-23T09:17:38.680496Z"
+}

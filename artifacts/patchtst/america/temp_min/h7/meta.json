@@ -1,0 +1,16 @@
+{
+  "country_label": "United States",
+  "country_key": "america",
+  "param": "temp_min",
+  "horizon_days": 7,
+  "backtest_metrics": {
+    "MAE": 2.0047693817956107,
+    "RMSE": 2.293196217772185,
+    "MAPE%": 11.73767252759397,
+    "R2": -7.882887838423815
+  },
+  "train_window_days": 730,
+  "input_size": 365,
+  "max_steps": 500,
+  "saved_at": "2025-08-23T09:25:48.172662Z"
+}

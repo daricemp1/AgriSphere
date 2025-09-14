@@ -1,0 +1,16 @@
+{
+  "country_label": "India",
+  "country_key": "india",
+  "param": "soil_moisture",
+  "horizon_days": 7,
+  "backtest_metrics": {
+    "MAE": 0.0346982695813689,
+    "RMSE": 0.0420743742444779,
+    "MAPE%": 16.586513512985164,
+    "R2": -9.135750018991384
+  },
+  "train_window_days": 730,
+  "input_size": 365,
+  "max_steps": 500,
+  "saved_at": "2025-08-23T09:13:32.899044Z"
+}

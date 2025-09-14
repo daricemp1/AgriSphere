@@ -1,0 +1,16 @@
+{
+  "country_label": "Singapore",
+  "country_key": "singapore",
+  "param": "temp_min",
+  "horizon_days": 3,
+  "backtest_metrics": {
+    "MAE": 0.6880884261358354,
+    "RMSE": 0.779570681059612,
+    "MAPE%": 2.916807741826175,
+    "R2": -15.236932405448735
+  },
+  "train_window_days": 730,
+  "input_size": 365,
+  "max_steps": 500,
+  "saved_at": "2025-08-23T09:20:16.877384Z"
+}

@@ -1,0 +1,83 @@
+{
+  "singapore": {
+    "soil_moisture": {
+      "14": "/content/drive/MyDrive/Models/patchtst/singapore/soil_moisture/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/singapore/soil_moisture/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/singapore/soil_moisture/h7"
+    },
+    "temp_max": {
+      "14": "/content/drive/MyDrive/Models/patchtst/singapore/temp_max/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/singapore/temp_max/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/singapore/temp_max/h7"
+    },
+    "windspeed": {
+      "14": "/content/drive/MyDrive/Models/patchtst/singapore/windspeed/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/singapore/windspeed/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/singapore/windspeed/h7"
+    },
+    "precipitation": {
+      "14": "/content/drive/MyDrive/Models/patchtst/singapore/precipitation/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/singapore/precipitation/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/singapore/precipitation/h7"
+    },
+    "temp_min": {
+      "14": "/content/drive/MyDrive/Models/patchtst/singapore/temp_min/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/singapore/temp_min/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/singapore/temp_min/h7"
+    }
+  },
+  "india": {
+    "soil_moisture": {
+      "14": "/content/drive/MyDrive/Models/patchtst/india/soil_moisture/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/india/soil_moisture/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/india/soil_moisture/h7"
+    },
+    "temp_max": {
+      "14": "/content/drive/MyDrive/Models/patchtst/india/temp_max/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/india/temp_max/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/india/temp_max/h7"
+    },
+    "windspeed": {
+      "14": "/content/drive/MyDrive/Models/patchtst/india/windspeed/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/india/windspeed/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/india/windspeed/h7"
+    },
+    "precipitation": {
+      "14": "/content/drive/MyDrive/Models/patchtst/india/precipitation/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/india/precipitation/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/india/precipitation/h7"
+    },
+    "temp_min": {
+      "14": "/content/drive/MyDrive/Models/patchtst/india/temp_min/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/india/temp_min/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/india/temp_min/h7"
+    }
+  },
+  "america": {
+    "soil_moisture": {
+      "14": "/content/drive/MyDrive/Models/patchtst/america/soil_moisture/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/america/soil_moisture/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/america/soil_moisture/h7"
+    },
+    "temp_max": {
+      "14": "/content/drive/MyDrive/Models/patchtst/america/temp_max/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/america/temp_max/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/america/temp_max/h7"
+    },
+    "windspeed": {
+      "14": "/content/drive/MyDrive/Models/patchtst/america/windspeed/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/america/windspeed/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/america/windspeed/h7"
+    },
+    "precipitation": {
+      "14": "/content/drive/MyDrive/Models/patchtst/america/precipitation/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/america/precipitation/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/america/precipitation/h7"
+    },
+    "temp_min": {
+      "14": "/content/drive/MyDrive/Models/patchtst/america/temp_min/h14",
+      "3": "/content/drive/MyDrive/Models/patchtst/america/temp_min/h3",
+      "7": "/content/drive/MyDrive/Models/patchtst/america/temp_min/h7"
+    }
+  }
+}

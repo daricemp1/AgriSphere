@@ -1,0 +1,16 @@
+{
+  "country_label": "Singapore",
+  "country_key": "singapore",
+  "param": "windspeed",
+  "horizon_days": 14,
+  "backtest_metrics": {
+    "MAE": 0.7301839246230871,
+    "RMSE": 0.889612864326466,
+    "MAPE%": 23.00637747065924,
+    "R2": -0.9619747777400984
+  },
+  "train_window_days": 730,
+  "input_size": 365,
+  "max_steps": 500,
+  "saved_at": "2025-08-23T09:21:50.696846Z"
+}

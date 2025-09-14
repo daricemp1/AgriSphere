@@ -1,0 +1,16 @@
+{
+  "country_label": "India",
+  "country_key": "india",
+  "param": "temp_max",
+  "horizon_days": 3,
+  "backtest_metrics": {
+    "MAE": 1.4205913846454925,
+    "RMSE": 1.5739950440160502,
+    "MAPE%": 4.938493311410708,
+    "R2": -4.60644893562189
+  },
+  "train_window_days": 730,
+  "input_size": 365,
+  "max_steps": 500,
+  "saved_at": "2025-08-23T09:14:16.726165Z"
+}

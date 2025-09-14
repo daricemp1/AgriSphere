@@ -1,0 +1,16 @@
+{
+  "country_label": "United States",
+  "country_key": "america",
+  "param": "soil_moisture",
+  "horizon_days": 3,
+  "backtest_metrics": {
+    "MAE": 0.0265310990308958,
+    "RMSE": 0.0303300100486667,
+    "MAPE%": 12.732876693765506,
+    "R2": -39.40704723732498
+  },
+  "train_window_days": 730,
+  "input_size": 365,
+  "max_steps": 500,
+  "saved_at": "2025-08-23T09:23:21.785891Z"
+}

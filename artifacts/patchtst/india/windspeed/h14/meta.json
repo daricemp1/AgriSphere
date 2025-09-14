@@ -1,0 +1,16 @@
+{
+  "country_label": "India",
+  "country_key": "india",
+  "param": "windspeed",
+  "horizon_days": 14,
+  "backtest_metrics": {
+    "MAE": 1.2298643639622902,
+    "RMSE": 1.5487634569233717,
+    "MAPE%": 28.82960215833481,
+    "R2": -1.1932125693314182
+  },
+  "train_window_days": 730,
+  "input_size": 365,
+  "max_steps": 500,
+  "saved_at": "2025-08-23T09:16:54.075785Z"
+}
