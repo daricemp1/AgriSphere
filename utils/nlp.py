@@ -2,6 +2,7 @@ import os
 import re
 import requests
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Transformers
 import torch
@@ -10,6 +11,14 @@ from transformers import (
     AutoModelForMaskedLM,
     pipeline,
 )
+
+#Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # python-dotenv not installed, that's fine
+    pass
 
 # Pretrained AgricultureBERT with the best hyperparameters tuned 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -78,9 +87,16 @@ def refine_keywords_with_agribert(disease: str, crop_stage: str = None) -> str:
 
 # LLM advisory via Hugging Face Inference Providers (router)
 
-
 HUGGINGFACE_API_URL = "https://router.huggingface.co/novita/v3/openai/chat/completions"
-HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN", "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")
+
+# Secure token loading with proper error handling
+HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
+
+if not HUGGINGFACE_TOKEN:
+    raise ValueError(
+        "HUGGINGFACE_TOKEN environment variable is required. "
+        "Please set it in your environment or .env file."
+    )
 
 def _extract_numeric(val):
     """Strip arrows/symbols, return float if possible, else 0.0"""
@@ -93,7 +109,6 @@ def _extract_numeric(val):
         return float(txt)
     except Exception:
         return 0.0
-
 def generate_guidelines_via_mistral(disease, weather_summary, crop_stage=None, crop=None):
     headers = {
         "Authorization": f"Bearer {HUGGINGFACE_TOKEN}",

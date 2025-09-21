@@ -342,9 +342,7 @@ p, li, label {
   color: #7f1d1d;
 }
 
-/* =========================================================
-   ENHANCED KPI SYSTEM
-   ========================================================= */
+/*  KPI SYSTEM */
 .kpi{
   background: linear-gradient(145deg, #ffffff, #f0fff4);
   border-radius: var(--radius-lg);
@@ -852,7 +850,7 @@ p, li, label {
 
 /* Make text inside .card.soft readable */
 .card.soft span { 
-  color: var(--ink-900) !important;  /* or any hex you like */
+  color: var(--ink-900) !important;  
 }
 .stMarkdown
 {
@@ -943,8 +941,8 @@ p, li, label {
 .metric .label { font-size: var(--text-sm); font-weight:700; color:var(--ink-600); text-transform:uppercase; letter-spacing:.06em; }
 .metric .value { font-size: var(--text-3xl); font-weight:900; color:var(--ink-900); }
 
-.money-positive { color:#065f46; }   /* savings/under budget */
-.money-negative { color:#7f1d1d; }   /* over budget */
+.money-positive { color:#065f46; }  
+.money-negative { color:#7f1d1d; }   
 
 .budget-meter { margin-top:.75rem; height:10px; border-radius: var(--radius-full); background:#eef2f7; overflow:hidden; position:relative; }
 .budget-meter .fill { height:100%; width:0%; background: linear-gradient(90deg, #22c55e, #16a34a); transition: width .6s ease; }

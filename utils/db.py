@@ -3,8 +3,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-# -------- Resolve DB location (env overrides supported) --------
-# AGRISPHERE_DB_PATH takes precedence; otherwise use AGRISPHERE_DB_DIR; else <project_root>/data/agrisphere.db
+#Resolve DB location (
 DB_FILE = os.getenv("AGRISPHERE_DB_PATH")
 DB_DIR = os.getenv("AGRISPHERE_DB_DIR")
 
@@ -25,9 +24,8 @@ else:
     data_dir.mkdir(parents=True, exist_ok=True)
     DB_PATH = data_dir / "agrisphere.db"
 
-
+# Pragmas for performance + reliability
 def _ensure_schema(conn: sqlite3.Connection) -> None:
-    # Pragmas for performance + reliability
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA synchronous=NORMAL;")
     conn.execute("PRAGMA foreign_keys=ON;")

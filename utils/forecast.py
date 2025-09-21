@@ -170,46 +170,69 @@ def get_coordinates(location_name: str, count: int = 1, language: str = "en") ->
         print(f"Geocoding error: {e}")
         return None
 
-#  Data fetcher (Open-Meteo ERA5) 
-def fetch_weather_data(country: str, history_years: float = 3.5, include_soil_moisture: bool = True, latitude: float = None, longitude: float = None) -> pd.DataFrame:
+
+# Data fetcher (Open-Meteo ERA5)
+# Fetches daily weather (and optional soil moisture) for a country or custom lat/lon.
+# Caches JSON responses locally and supports OFFLINE mode to read from cache.
+def fetch_weather_data(
+    country: str,
+    history_years: float = 3.5,
+    include_soil_moisture: bool = True,
+    latitude: float = None,
+    longitude: float = None
+) -> pd.DataFrame:
+    # Local imports to limit module load time when function isn't used.
     import pathlib, json
+    # OFFLINE toggle: use cache only when set to "1/true/yes".
     OFFLINE = os.getenv("OFFLINE", "0") in ("1", "true", "True", "yes")
+    # Cache folder for Open-Meteo responses.
     CACHE_DIR = pathlib.Path("./data/cache/open_meteo")
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Built-in country → (lat, lon) map for quick access.
     COUNTRY_LL = {
         "singapore": (1.3521, 103.8198),
         "america":   (41.8780, -93.0977),
         "india":     (30.7333, 76.7794),
     }
+    # Normalized key from input country 
     key = (country or "").strip().lower()
 
+    # Coordinate selection precedence: explicit lat/lon > known country key > error.
     if latitude is not None and longitude is not None:
         lat, lon = latitude, longitude
+        # Create a unique cache key for arbitrary coordinates.
         key = f"custom_{lat:.2f}_{lon:.2f}"
     elif key in COUNTRY_LL:
         lat, lon = COUNTRY_LL[key]
     else:
+        # Guard: neither valid country nor explicit coordinates.
         raise ValueError(f"Unknown country key '{country}' or missing coordinates.")
 
+    # Path of the cache file for the chosen location.
     cache_path = CACHE_DIR / f"{key}.json"
 
+    # If OFFLINE and cache exists, read from disk; otherwise hit the API (and save to cache).
     if OFFLINE and cache_path.exists():
         with open(cache_path, "r") as f:
             data = json.load(f)
     else:
+        # Determine date range from today going back 'history_years'.
         end_dt = date.today()
         start_dt = end_dt - timedelta(days=int(history_years * 365.25))
+        # Daily variables to request from Open-Meteo.
         daily_vars = [
             "temperature_2m_max",
             "temperature_2m_min",
             "precipitation_sum",
             "wind_speed_10m_max",
         ]
+        # Optional soil moisture variable name (0–7 cm).
         sm_var = "soil_moisture_0_to_7cm_mean"
         if include_soil_moisture:
             daily_vars.append(sm_var)
 
+        # Archive ERA5 endpoint and query parameters.
         url = "https://archive-api.open-meteo.com/v1/era5"
         params = {
             "latitude": lat, "longitude": lon,
@@ -217,26 +240,32 @@ def fetch_weather_data(country: str, history_years: float = 3.5, include_soil_mo
             "daily": ",".join(daily_vars), "timezone": "UTC",
         }
         try:
+            # Call API with a conservative timeout; raise on non-200 responses.
             resp = requests.get(url, params=params, timeout=30)
             resp.raise_for_status()
             data = resp.json()
+            # Persist successful response to cache for reproducibility/offline use.
             with open(cache_path, "w") as f:
                 json.dump(data, f)
         except Exception as e:
+            # Fallback: if any cache exists, load it; otherwise, escalate the error.
             if cache_path.exists():
                 with open(cache_path, "r") as f:
                     data = json.load(f)
             else:
                 raise RuntimeError(f"Failed to fetch Open-Meteo data and no cache present: {e}")
 
+    # Guard: ensure expected structure is present in the API/cache payload.
     if "daily" not in data or "time" not in data["daily"]:
         raise RuntimeError("Open-Meteo response missing 'daily' data")
 
+    # Extract daily block and validate record count.
     daily = data["daily"]
     n = len(daily["time"])
     if n == 0:
         raise RuntimeError("Open-Meteo returned no daily records")
 
+    # Build base DataFrame with consistent column names.
     df = pd.DataFrame({
         "ds": pd.to_datetime(daily["time"]),
         "temp_max": daily.get("temperature_2m_max", [np.nan] * n),
@@ -244,17 +273,23 @@ def fetch_weather_data(country: str, history_years: float = 3.5, include_soil_mo
         "precipitation": daily.get("precipitation_sum", [np.nan] * n),
         "windspeed": daily.get("wind_speed_10m_max", [np.nan] * n),
     })
+    # Append soil moisture column if requested (filled with NaN if missing).
     if include_soil_moisture:
         df["soil_moisture"] = daily.get("soil_moisture_0_to_7cm_mean", [np.nan] * n)
 
+    # Ensure chronological order and a continuous daily index (fills any gaps).
     df = df.sort_values("ds").reset_index(drop=True)
     full_range = pd.date_range(df["ds"].min(), df["ds"].max(), freq="D")
     df = df.set_index("ds").reindex(full_range)
     df.index.name = "ds"
+    # Use forward/backward fill to patch occasional missing values from the API.
     df = df.ffill().bfill().reset_index()
+    # Lightweight provenance: store covered date range as DataFrame attributes.
     df.attrs["start"] = str(df["ds"].min().date())
     df.attrs["end"] = str(df["ds"].max().date())
+    # Return a clean, gap-free daily frame ready for modeling/backtesting.
     return df
+
 
 #  Pretrained PatchTST loader
 class PretrainedPatchTSTPredictor:
@@ -389,25 +424,60 @@ class PretrainedPatchTSTPredictor:
         return info
 
     def _prepare_data(self, raw_data: pd.DataFrame, param: str, input_size: int, horizon_days: int = None) -> pd.DataFrame:
+        """
+        Prepare a single-parameter daily time series for forecasting.
+
+        - Validates the target column `param` exists.
+        - Parses/sets a daily DateTime index on 'ds' and sorts chronologically.
+        - Reindexes to a dense daily range (fills gaps) and imputes missing values
+        via linear interpolation + forward/backward fill.
+        - Renames target to 'y' and assigns a constant 'unique_id' for model APIs.
+        - Ensures there is enough trailing history: `input_size` + a safety margin
+        (max of 60 days or 2×horizon_days), then trims to the last `need` rows.
+
+        Returns
+        pd.DataFrame with columns: ['ds', 'y', 'unique_id'] and daily frequency.
+        """
+        # Ensure the requested parameter/column is present
         if param not in raw_data.columns:
             raise ValueError(f"Parameter '{param}' not found in data")
 
+        # Keep only the timestamp and target columns; drop rows where target is NaN
         df = raw_data[["ds", param]].dropna().copy()
+
+        # Normalize 'ds' to pandas datetime and make it the index, sorted oldest→newest
         df["ds"] = pd.to_datetime(df["ds"])
         df = df.set_index("ds").sort_index()
 
+        # Build a continuous daily date range covering the observed span
         full_range = pd.date_range(df.index.min(), df.index.max(), freq="D")
+
+        # Reindex to daily frequency (inserts missing dates as NaNs)
         df = df.reindex(full_range)
+
+        # Fill internal gaps smoothly: linear interpolation in both directions
         df[param] = df[param].interpolate(method='linear', limit_direction='both')
+
+        # Guard against leading/trailing NaNs that interpolation might miss
         df[param] = df[param].ffill().bfill()
 
+        # Return to a regular column layout with standard names expected by many libs
         df = df.reset_index().rename(columns={"index": "ds", param: "y"})
+
+        # Some forecasting libraries expect/allow grouping by a series identifier
         df["unique_id"] = "series1"
 
+        # Safety margin ensures enough context beyond the model's input window:
         margin = max(60, (horizon_days or 7) * 2)
+
+        # Total history required = model input window + safety margin
         need = input_size + margin
+
+        # Fail fast if there isn't enough history to make a reliable sample
         if len(df) < need:
             raise ValueError(f"Insufficient history: have {len(df)} rows, require >= {need}")
+
+        # Keep only the most recent `need` days to reduce memory and focus the context
         df = df.iloc[-need:].copy()
 
         return df
@@ -644,9 +714,10 @@ def refine_forecast(
             elif param == "windspeed":
                 refined += np.clip(0.02 * precip, 0.0, 0.6)
             elif param == "soil_moisture":
-            
-                alpha = 0.0018  # fraction per mm
-                evap_base = 0.006  # daily evaporation fraction
+                # fraction per mm
+                alpha = 0.0018  
+                # daily evaporation fraction
+                evap_base = 0.006  
                 add = np.clip(alpha * precip[:refined.size], 0.0, 0.04)
                 sub = evap_base * np.ones(refined.size)
                 sm = np.empty_like(refined)

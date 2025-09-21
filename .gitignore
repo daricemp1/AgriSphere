@@ -11,3 +11,9 @@ farmproto/
 .streamlit/
 
 sample_data/
+
+# .gitignore
+.env
+*.env
+.env.local
+.env.production

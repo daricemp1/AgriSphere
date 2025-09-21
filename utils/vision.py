@@ -164,7 +164,7 @@ def evaluate_model_on_dataset(model, dataloader, class_names):
     print("Classification Report:")
     print(classification_report(all_labels, all_preds, target_names=class_names))
 
-    # Optionally visualize confusion matrix
+    # visualize confusion matrix
     cm = confusion_matrix(all_labels, all_preds)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
     disp.plot(xticks_rotation=90)

@@ -213,6 +213,7 @@ def offline_guidelines(disease, weather_summary, crop_stage, crop):
         norm["soil_moisture"],
     )
 
+#Show last-updated timestamp (UTC) of local Open-Meteo cache file for UI
 def cache_mtime(country_key: str) -> str:
     p = Path("./data/cache/open_meteo") / f"{country_key}.json"
     if p.exists():
@@ -222,6 +223,7 @@ def cache_mtime(country_key: str) -> str:
             return "—"
     return "—"
 
+#Pre-fetch and persist weather datasets to speed up offline/online flows
 def prime_cache(countries=None, years=3.5, include_soil=True):
     countries = countries or COUNTRY_KEYS
     ok, failed = [], []
@@ -232,7 +234,7 @@ def prime_cache(countries=None, years=3.5, include_soil=True):
         except Exception as e:
             failed.append((k, str(e)))
     return ok, failed
-
+#Compute mean/min/max (and trend tag) per parameter for KPI badges
 def summarize_forecasts(forecasts, weather_df, horizon_days):
     summary = {}
     for param, forecast_data in forecasts.items():
@@ -278,7 +280,7 @@ def summarize_forecasts(forecasts, weather_df, horizon_days):
             symbol = {"increasing": "↗", "decreasing": "↘", "stable": "→", "unknown": "?"}.get(trend_val, "")
             display_summary[label] = f"{mean_val:.2f} {symbol}"
     return display_summary
-
+#Unify forecast outputs (dict/df) into numeric series + aligned dates
 def _extract_and_clean_forecast(entry, weather_df, param, horizon_days):
     preds, dates = [], []
     if isinstance(entry, dict) and entry.get("raw_result"):
@@ -300,7 +302,7 @@ def _extract_and_clean_forecast(entry, weather_df, param, horizon_days):
     else:
         dates = pd.to_datetime(dates)
     return preds.tolist(), pd.DatetimeIndex(dates)
-
+#De-flatten low-variance predictions by injecting plausible drift/jitter
 def _deflatten_forecast(preds, hist_series: pd.Series, param: str):
     p = np.array(pd.to_numeric(pd.Series(preds), errors="coerce"), dtype=float)
     if p.size == 0:
@@ -330,7 +332,7 @@ def _deflatten_forecast(preds, hist_series: pd.Series, param: str):
     if param == "soil_moisture":
         new_p = np.clip(new_p, 0.0, 1.0)
     return new_p.tolist()
-
+#Pick the nearest predefined location (SG/US/IN) for custom coords
 def find_closest_country(lat, lon):
     COUNTRY_LL = {
         "singapore": (1.3521, 103.8198),
@@ -343,7 +345,7 @@ def find_closest_country(lat, lon):
         if dist < min_dist:
             min_dist, closest_key = dist, key
     return closest_key
-
+#Compute great-circle distance (km) between two lat/lon pairs
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371.0
     dlat = math.radians(lat2 - lat1)
@@ -353,6 +355,8 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 # PatchTST forecasting
+#Purpose: Produce per-parameter forecasts for the selected horizon using:
+# (a) pre-trained PatchTST, or (b) adjusted fallback (for custom/failed cases).
 def build_forecasts_patchtst(df, country_key: str, period_type: str,
                              use_patchtst: bool, patchtst_available: bool):
     horizon_map = {"short": 3, "medium": 7, "long": 14}
@@ -418,6 +422,8 @@ def build_forecasts_patchtst(df, country_key: str, period_type: str,
                 errors.append(f"{p}: PatchTST not available")
     return bundle, errors, engines
 
+# Lightweight heuristic forecast using recent trend + noise; optionally
+# quantile/scale-calibrates to the closest predefined location distribution.
 def adjusted_fallback_forecast(recent_data, param, horizon_days, closest_df=None, seed_parts=None):
     try:
         if seed_parts is not None:
@@ -457,6 +463,7 @@ def adjusted_fallback_forecast(recent_data, param, horizon_days, closest_df=None
         st.warning(f"Error in adjusted fallback for {param}: {str(e)}. Using zeros.")
         return [0] * horizon_days
 
+#Map forecast values to historical empirical quantiles to correct distribution.
 def rankdata(a):
     return np.argsort(np.argsort(a)) + 1
 
@@ -647,7 +654,7 @@ weather_df = None
 forecasts = {}
 summary = {}
 
-# Content helpers
+#  Render top-line KPIs for forecast means and show detected disease, if any
 def create_kpi_dashboard(summary_map, disease_name):
     if summary_map:
         kpi_cols = st.columns(5)
@@ -661,7 +668,7 @@ def create_kpi_dashboard(summary_map, disease_name):
             )
     if disease_name:
         st.markdown(f'<div class="card success"><b>Detected disease:</b> <b>{disease_name}</b></div>', unsafe_allow_html=True)
-
+# Display quick action bullets contextualized by forecast/disease state
 def create_action_items_section(forecasts_bundle, disease_name):
     st.markdown('<div class="section-title">🎯 Recommended Actions</div>', unsafe_allow_html=True)
     with st.container():
@@ -671,6 +678,7 @@ def create_action_items_section(forecasts_bundle, disease_name):
         st.write("- Schedule irrigation around rainfall windows to avoid waterlogging.")
         st.write("- Re-check variety/stage-specific thresholds in the advice tab.")
 
+#Build normalized 'historical' and 'forecast' frames for plotting
 def _mk_hist_forecast_frames(param_key, weather_df, forecast_values, forecast_dates):
     hist_days = min(30, len(weather_df))
     recent_hist = weather_df.tail(hist_days).copy()
@@ -687,6 +695,7 @@ def _mk_hist_forecast_frames(param_key, weather_df, forecast_values, forecast_da
     })
     return hist_df, f_df
 
+#Build normalized 'historical' and 'forecast' frames for plotting
 def create_forecast_details(forecasts_bundle, weather_df, country_label, horizon_days,
                             base_precip_preds=None, base_precip_dates=None):
     st.markdown('<div class="section-title">🌤️Other Forecast Visualizations</div>', unsafe_allow_html=True)
@@ -748,7 +757,8 @@ def create_forecast_details(forecasts_bundle, weather_df, country_label, horizon
         key_suffix = f"{p_key}-{_stable_seed(st.session_state.current_country or 'NA', p_key, len(preds_list))}"
         with st.expander(f"{p_title} Forecast", expanded=False):
             st.plotly_chart(fig_param, use_container_width=True, key=f"plotly-{key_suffix}")
-
+            
+#Show a simple "how to use" checklist when no analysis has been run yet
 def create_onboarding_flow():
     st.markdown('<div class="card"><span class="section-title">🚀 Get started</span>', unsafe_allow_html=True)
     st.write("- Upload a leaf image in **Detection & Advice**.")

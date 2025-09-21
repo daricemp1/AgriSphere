@@ -19,7 +19,7 @@ def get_disease_description(class_name):
         clean_name = normalized.replace('_', ' ').title()
         return f"{clean_name} detected"
 
-# Builds EfficientNet model with custom classifier layer
+# Buildsmobile net custom classifier layer
 def create_disease_model(num_classes):
     model = models.mobilenet_v3_large(weights=None)
     model.classifier[3] = torch.nn.Linear(model.classifier[3].in_features, num_classes)
